@@ -60,6 +60,9 @@ def compatibility_binary(atr1, atr2):
     score = (atr1 * atr2).sum()
     return score
 
+def similarity(a, b):
+    return np.dot(a,b)
+
 def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=True, edge_binary=True):
     '''
     Compute the best matching with two ARGs.
@@ -100,37 +103,25 @@ def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=Tru
     C_n = alpha*C_n
 
     ## pre-calculate the edge compatibility
-    C_e = np.zeros([(A+1)*(A+1),(I+1)*(I+1)])
-    tmp_edges = np.full([(A+1),(A+1)], np.nan)
-    tmp_edges[:A,:A] = ARG1.edges_matrix
-    tmp_edges[A,A] = float('Inf')
-    edge_atr_1 = np.expand_dims(tmp_edges.reshape([-1]), axis = -1)
-    tmp_edges = np.full([(I+1),(I+1)], np.nan)
-    # tmp_edges[:I,:I]= ARG2.edges_matrix
-    tmp_edges[I,I] = float('Inf')
-    edge_atr_2 = np.expand_dims(tmp_edges.reshape([-1]), axis = -1)
-
-    C_e = {}
-
-    for p in range((A+1)*(A+1)):
-        atr1_p = edge_atr_1[p]
-        if atr1_p.ndim < 2:
-            atr1_p = atr1_p[:,np.newaxis]
-        if edge_binary:
-            C_e[p,:] = cdist(atr1_p, edge_atr_2, compatibility_binary)
-        else:
-            C_e[p,:] = cdist(atr1_p, edge_atr_2, compatibility)
-
-    # case with inf
-    C_e[np.isnan(C_e)] = 0
-    C_e1 = C_e[C_e != 0 ]
-    C_e[C_e == float('Inf')] = 0.1 #np.percentile(C_e1[C_e1 != float('Inf')],prct) ### modification
+    C_e = dict()
+    for (key_a, key_b) in ARG1.edges_map.keys():
+        for (key_i, key_j) in ARG2.edges_map.keys():
+            if edge_binary:
+                C_e[(key_a, key_b, key_i, key_j)] = similarity(ARG1.edges_map[(key_a, key_b)],
+                                                               ARG2.edges_map[(key_i, key_j)])
+            else:
+                C_e[(key_a, key_b, key_i, key_j)] = similarity(ARG1.edges_map[(key_a, key_b)],
+                                                               ARG2.edges_map[(key_i, key_j)])
+    #TODO set to 0.1 or INF? by original code, there can be some changes
+    for i in range(A + 1):
+        C_e[i, A] = float('Inf')
+        C_e[A, i] = float('Inf')
 
     return C_n, C_e
 
 # graph matching algorithm!
 
-def graph_matching(C_n, C_e, beta_0=0.1, beta_f=20, beta_r=1.025,
+def graph_matching(C_n, C_e, ARG1, ARG2, beta_0=0.1, beta_f=20, beta_r=1.025,
                    I_0=20, I_1=200, e_B=0.1, e_C=0.01):
     ##  We first do not consider the stochastic.
     # set up the soft assignment matrix
@@ -172,9 +163,9 @@ def graph_matching(C_n, C_e, beta_0=0.1, beta_f=20, beta_r=1.025,
             Q = np.zeros([A+1, I+1])
 
             # Edge attribute
-            for a in range(A+1):
-                for i in range(I+1):
-                    Q[a,i] = sum(sum(C_e[a*(A+1):(a+1)*(A+1),i*(I+1):(i+1)*(I+1)]*m_Head))
+            for (key_a, key_b) in ARG1.edges_map.keys():
+                for (key_i, key_j) in ARG2.edges_map.keys():
+                        Q[key_a,key_i] += C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_a, key_i]
             # Node attribute
             Q = Q + C_n
 
@@ -201,9 +192,10 @@ def graph_matching(C_n, C_e, beta_0=0.1, beta_f=20, beta_r=1.025,
 
             # update converge_B
             converge_B = abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))) < e_B
+            print(converge_B, abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))))
         # update beta
         beta *= beta_r
-
+        print(beta, beta_f, beta_r)
     match_matrix = heuristic(m_Head, A, I)
     #match_matrix = m_Head
     return match_matrix

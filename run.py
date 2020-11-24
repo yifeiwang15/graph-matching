@@ -11,9 +11,14 @@ def run_graph_matching(size=20, weight_range=1, connected_rate=0.5, noise_rate=0
     ARG1 = ARG(M1, V1)
     ARG2 = ARG(M2, V2)
     C_n, C_e = pre_compute_compatibility( ARG1, ARG2, alpha=1, stochastic=0 )
-    match_matrix = graph_matching(C_n, C_e)
+    match_matrix = graph_matching(C_n, C_e, ARG1, ARG2)
+    sys.exit()
     final_score = match_score(match_matrix, idx1, idx2)
     return final_score
+
+print("start")
+run_graph_matching()
+sys.exit()
 
 # try different parameter combinations of size, connected_rate and noise_rate.
 # Further add the stochastic property.
@@ -25,7 +30,7 @@ def run_graph_matching(size=20, weight_range=1, connected_rate=0.5, noise_rate=0
 
 # The result should be saved as a dataframe.
 size = 20
-repeat = 1 
+repeat = 1
 connected_rate_list = [0.2, 0.3, 0.5]
 noise_rate_list = [0, 0.1, 0.2, 0.3, 0.5]
 acc_mean = np.zeros([len(connected_rate_list), len(noise_rate_list)])
@@ -42,7 +47,7 @@ for i in range(len(connected_rate_list)):
             end = datetime.now()
             time[rep] = (end-start).seconds
         print(str(end) + ' | ' + 'c_rate: '+ str(connected_rate_list[i]) + ' | ' + 'n_rate: '+ str(noise_rate_list[j]))
-        print(str(np.mean(acc))+' | ' + str(np.std(acc)) + ' | ' + str(np.mean(time))+' | ' + str(np.std(time)))    
+        print(str(np.mean(acc))+' | ' + str(np.std(acc)) + ' | ' + str(np.mean(time))+' | ' + str(np.std(time)))
         acc_mean[i,j] = np.mean(acc)
         acc_std[i,j] = np.std(acc)
         time_mean[i,j] = np.mean(time)

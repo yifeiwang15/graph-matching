@@ -32,7 +32,7 @@ class ARG:
         # for i in range(self.num_nodes):
             # for j in range(self.num_nodes):
                 # self.edges[(i,j)] = edge(i,j)
-        self.edges_matrix = M
+        self.edges_map = M
 
 
 class node:
@@ -75,7 +75,7 @@ class edge:
             return True
 
     def get_atrs(self):
-        return self.ARG.edges_matrix[self.node1,self.node2]
+        return self.ARG.edges_map[(self.node1,self.node2)]
 
     def num_atrs(self):
         return len(self.get_atrs())
