@@ -61,7 +61,8 @@ def compatibility_binary(atr1, atr2):
     return score
 
 def similarity(a, b):
-    return np.dot(a,b)
+    sigma = 1
+    return np.exp(-np.linalg.norm(a - b) / sigma) # e^(norm(a-b)/sigma)
 
 def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=True, edge_binary=True):
     '''
@@ -70,7 +71,7 @@ def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=Tru
     '''
 
     beta_0 = 0.1
-
+    threshold = 0.1
 
     # Size of the real match-in matrix
     A = ARG1.num_nodes
@@ -114,14 +115,14 @@ def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=Tru
                                                                ARG2.edges_map[(key_i, key_j)])
     #TODO set to 0.1 or INF? by original code, there can be some changes
     for i in range(A + 1):
-        C_e[i, A] = float('Inf')
-        C_e[A, i] = float('Inf')
+        C_e[i, A] = threshold
+        C_e[A, i] = threshold
 
     return C_n, C_e
 
 # graph matching algorithm!
 
-def graph_matching(C_n, C_e, ARG1, ARG2, beta_0=0.1, beta_f=20, beta_r=1.025,
+def graph_matching(C_n, C_e, ARG1, ARG2, beta_0=0.1, beta_f=20, beta_r=1.05,
                    I_0=20, I_1=200, e_B=0.1, e_C=0.01):
     ##  We first do not consider the stochastic.
     # set up the soft assignment matrix
@@ -165,16 +166,18 @@ def graph_matching(C_n, C_e, ARG1, ARG2, beta_0=0.1, beta_f=20, beta_r=1.025,
             # Edge attribute
             for (key_a, key_b) in ARG1.edges_map.keys():
                 for (key_i, key_j) in ARG2.edges_map.keys():
-                        Q[key_a,key_i] += C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_a, key_i]
+                        Q[key_a,key_i] += C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_b, key_j]
+                        # print(C_e[(key_a, key_b, key_i, key_j)] , m_Head[key_a, key_i])
             # Node attribute
             Q = Q + C_n
-
             # Update m_Head
             m_Head = np.exp(beta*Q)
             m_Head[-1, -1] = 0
 
             converge_C = False
             I_C = 0
+            m_Head = normalize(m_Head, norm='l2',axis=0)*normalize(m_Head, norm='l2',axis=0)                # By row
+            m_Head = normalize(m_Head, norm='l2',axis=1)*normalize(m_Head, norm='l2',axis=1)
             while (not converge_C) and I_C <= I_1: # Do C until C is converge or iteration exceeds
                 I_C += 1
                 old_C = m_Head
@@ -192,10 +195,10 @@ def graph_matching(C_n, C_e, ARG1, ARG2, beta_0=0.1, beta_f=20, beta_r=1.025,
 
             # update converge_B
             converge_B = abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))) < e_B
-            print(converge_B, abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))))
+            # print(converge_B, abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))))
         # update beta
         beta *= beta_r
-        print(beta, beta_f, beta_r)
+        # print(beta, beta_f, beta_r)
     match_matrix = heuristic(m_Head, A, I)
     #match_matrix = m_Head
     return match_matrix

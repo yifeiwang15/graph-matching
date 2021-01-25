@@ -5,19 +5,31 @@ import pandas as pd
 from twin_graphs_generator import generate_twin_graphs
 from ARG import ARG
 from graph_matching import pre_compute_compatibility, graph_matching, match_score
+import networkx as nx
+import matplotlib.pyplot as plt
 
-def run_graph_matching(size=20, weight_range=1, connected_rate=0.5, noise_rate=0.2):
+def run_graph_matching(size=4, weight_range=1, connected_rate=0.5, noise_rate=0.2):
     M1, M2, V1, V2, idx1, idx2 = generate_twin_graphs(size=size, weight_range=weight_range, connected_rate=connected_rate, noise_rate=noise_rate)
+    print(M1.keys(), M2.keys(), V1, V2, idx1, idx2)
+    draw_graph(M1, V1, 121)
+    draw_graph(M1, V1, 122)
+    plt.show()
     ARG1 = ARG(M1, V1)
     ARG2 = ARG(M2, V2)
     C_n, C_e = pre_compute_compatibility( ARG1, ARG2, alpha=1, stochastic=0 )
     match_matrix = graph_matching(C_n, C_e, ARG1, ARG2)
-    sys.exit()
     final_score = match_score(match_matrix, idx1, idx2)
     return final_score
 
+def draw_graph(M, V, subplot):
+    plt.subplot(subplot)
+    g = nx.Graph()
+    g.add_edges_from(M.keys())
+    nx.draw_networkx(g)
+
+
 print("start")
-run_graph_matching()
+print(run_graph_matching())
 sys.exit()
 
 # try different parameter combinations of size, connected_rate and noise_rate.
