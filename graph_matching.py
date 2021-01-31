@@ -74,8 +74,8 @@ def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=Tru
     threshold = 0.1
 
     # Size of the real match-in matrix
-    A = ARG1.num_nodes
-    I = ARG2.num_nodes
+    A = ARG1.g.number_of_nodes()
+    I = ARG2.g.number_of_nodes()
     real_size = [A, I] # ???
     augment_size = [A+1, I+1] # size of the matrix with slacks
 
@@ -91,9 +91,9 @@ def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=Tru
     C_n = np.zeros(augment_size)
 
     if node_binary:
-        C_n[:A,:I] = cdist(ARG1.nodes_vector, ARG2.nodes_vector, compatibility_binary)
+        C_n[:A,:I] = cdist(ARG1.node_vector(), ARG2.node_vector(), compatibility_binary)
     else:
-        C_n[:A,:I] = cdist(ARG1.nodes_vector, ARG2.nodes_vector, compatibility)
+        C_n[:A,:I] = cdist(ARG1.node_vector(), ARG2.node_vector(), compatibility)
 
     # Add score to slacks
     C_n[A,:-1] =  np.percentile(C_n[:A,:I],prct,0)
@@ -105,14 +105,14 @@ def pre_compute_compatibility(ARG1, ARG2, alpha=1, stochastic=0, node_binary=Tru
 
     ## pre-calculate the edge compatibility
     C_e = dict()
-    for (key_a, key_b) in ARG1.edges_map.keys():
-        for (key_i, key_j) in ARG2.edges_map.keys():
+    for (key_a, key_b) in list(ARG1.g.edges):
+        for (key_i, key_j) in list(ARG2.g.edges):
             if edge_binary:
-                C_e[(key_a, key_b, key_i, key_j)] = similarity(ARG1.edges_map[(key_a, key_b)],
-                                                               ARG2.edges_map[(key_i, key_j)])
+                C_e[(key_a, key_b, key_i, key_j)] = similarity(ARG1.g.edges[key_a, key_b]['eattr'],
+                                                               ARG2.g.edges[key_i, key_j]['eattr'])
             else:
-                C_e[(key_a, key_b, key_i, key_j)] = similarity(ARG1.edges_map[(key_a, key_b)],
-                                                               ARG2.edges_map[(key_i, key_j)])
+                C_e[(key_a, key_b, key_i, key_j)] = similarity(ARG1.g.edges[key_a, key_b]['eattr'],
+                                                               ARG2.g.edges[key_i, key_j]['eattr'])
     #TODO set to 0.1 or INF? by original code, there can be some changes
     for i in range(A + 1):
         C_e[i, A] = threshold
@@ -164,8 +164,8 @@ def graph_matching(C_n, C_e, ARG1, ARG2, beta_0=0.1, beta_f=20, beta_r=1.05,
             Q = np.zeros([A+1, I+1])
 
             # Edge attribute
-            for (key_a, key_b) in ARG1.edges_map.keys():
-                for (key_i, key_j) in ARG2.edges_map.keys():
+            for (key_a, key_b) in list(ARG1.g.edges):
+                for (key_i, key_j) in list(ARG2.g.edges):
                         Q[key_a,key_i] += C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_b, key_j]
                         # print(C_e[(key_a, key_b, key_i, key_j)] , m_Head[key_a, key_i])
             # Node attribute

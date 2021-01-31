@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 #test
 # There is some problem with class node and class edge.
 # (The attribute has error)
@@ -19,63 +20,75 @@ class ARG:
         # assert (len(M) == len(V)), "Input sizes of edge weight matrix and of nodes attributes do not match."
 
         # Use dictionary structure to store nodes and edges.
-        self.num_nodes = len(V)
-        self.nodes = {}
-        self.edges = {}
-        self.nodes_vector = V.reshape([self.num_nodes,-1])
-        # For nodes
-        for id in range(self.num_nodes):
-            self.nodes[id] = node(id)
-            #self.nodes_vector[id] = V[id]
+        self.g = nx.Graph()
+        for (a, b), value in M.items():
+            self.g.add_edge(a, b, eattr=value)
 
-        # For edges
-        # for i in range(self.num_nodes):
-            # for j in range(self.num_nodes):
-                # self.edges[(i,j)] = edge(i,j)
-        self.edges_map = M
+        for id in range(len(V)):
+            self.g.add_node(id, nattr=V[id])
 
-
-class node:
-
-    '''
-    Node is a class representing the point in a graph
-    Node will have edges(also class) connected to it
-    '''
-
-    def __init__(self, id, ARG=None):
-        self.ID = id
-        self.ARG = ARG
-
-    def has_atrs(self): # check if the node has attribute
-        if self.ARG is None:
-            return False
-        else:
-            return True
-
-    def get_atrs(self):
-        return self.ARG.nodes_vector[self.ID]  # Define in class AGC
-
-    def num_atrs(self):
-        return len(self.get_atrs())
+    def node_vector(self):
+        num_nodes = self.g.number_of_nodes()
+        v = np.zeros(num_nodes)
+        for i in range(num_nodes):
+            v[i] = self.g.nodes[i]['nattr']
+        return v.reshape([num_nodes,-1])
 
 
-class edge:
-    '''
-    Edge is the connection between nodes
-    It will have assigned weight and two end points (nodes)
-    '''
-    def __init__(self, node1, node2, AGR=None):
-        self.node1 = node1
-        self.node2 = node2
-        self.AGR = AGR
-    def has_atrs(self):
-        if self.ARG is None:
-            return False
-        else:
-            return True
-
-    def get_atrs(self):
-        return self.ARG.edges_map[(self.node1,self.node2)]
-
-    def num_atrs(self):
-        return len(self.get_atrs())
+#         self.nodes_vector = V.reshape([self.num_nodes,-1])
+#         # For nodes
+#         for id in range(self.num_nodes):
+#             self.nodes[id] = node(id)
+#             #self.nodes_vector[id] = V[id]
+#
+#         # For edges
+#         # for i in range(self.num_nodes):
+#             # for j in range(self.num_nodes):
+#                 # self.edges[(i,j)] = edge(i,j)
+#         self.edges_map = M
+#
+#
+# class node:
+#
+#     '''
+#     Node is a class representing the point in a graph
+#     Node will have edges(also class) connected to it
+#     '''
+#
+#     def __init__(self, id, ARG=None):
+#         self.ID = id
+#         self.ARG = ARG
+#
+#     def has_atrs(self): # check if the node has attribute
+#         if self.ARG is None:
+#             return False
+#         else:
+#             return True
+#
+#     def get_atrs(self):
+#         return self.ARG.nodes_vector[self.ID]  # Define in class AGC
+#
+#     def num_atrs(self):
+#         return len(self.get_atrs())
+#
+#
+# class edge:
+#     '''
+#     Edge is the connection between nodes
+#     It will have assigned weight and two end points (nodes)
+#     '''
+#     def __init__(self, node1, node2, AGR=None):
+#         self.node1 = node1
+#         self.node2 = node2
+#         self.AGR = AGR
+#     def has_atrs(self):
+#         if self.ARG is None:
+#             return False
+#         else:
+#             return True
+#
+#     def get_atrs(self):
+#         return self.ARG.edges_map[(self.node1,self.node2)]
+#
+#     def num_atrs(self):
+#         return len(self.get_atrs())
