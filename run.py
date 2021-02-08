@@ -4,33 +4,31 @@ import pandas as pd
 
 from twin_graphs_generator import generate_twin_graphs
 from ARG import ARG
-from graph_matching import pre_compute_compatibility, graph_matching, match_score
+from graph_matching import GraphMatching
 import networkx as nx
 import matplotlib.pyplot as plt
 
 def run_graph_matching(size=4, weight_range=1, connected_rate=0.5, noise_rate=0.2):
-    M1, M2, V1, V2, idx1, idx2 = generate_twin_graphs(size=size, weight_range=weight_range, connected_rate=connected_rate, noise_rate=noise_rate)
-    print(M1.keys(), M2.keys(), V1, V2, idx1, idx2)
-    ARG1 = ARG(M1, V1)
-    ARG2 = ARG(M2, V2)
-    C_n, C_e = pre_compute_compatibility( ARG1, ARG2, alpha=1, stochastic=0 )
-    match_matrix = graph_matching(C_n, C_e, ARG1, ARG2)
-    final_score = match_score(match_matrix, idx1, idx2)
-    return final_score, M1, M2, V1, V2
 
-def draw_graph(M, V, subplot):
+    algorithm = GraphMatching(size, weight_range, connected_rate, noise_rate)
+    match_matrix = algorithm.graph_matching()
+    final_score = GraphMatching.match_score(match_matrix, algorithm.idx1, algorithm.idx2)
+    return final_score, algorithm
+
+def draw_graph(g, subplot):
     plt.subplot(subplot)
-    g = nx.Graph()
-    g.add_edges_from(M.keys())
     nx.draw_networkx(g)
 
 if __name__ == '__main__':
     print("start")
-    score, M1, M2, V1, V2 =run_graph_matching()
+    score, algorithm = run_graph_matching()
     print(score)
-    draw_graph(M1, V1, 121)
-    draw_graph(M2, V2, 122)
+    draw_graph(algorithm.ARG1, 121)
+    draw_graph(algorithm.ARG2, 122)
     plt.show()
+
+
+
 
 # try different parameter combinations of size, connected_rate and noise_rate.
 # Further add the stochastic property.
