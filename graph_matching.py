@@ -250,10 +250,21 @@ class GraphMatching(object):
     # graph matching algorithm!
     @staticmethod
     def match_score(match_matrix, idx1, idx2):
-        match1 = [idx1[i] for i in match_matrix.nonzero()[0]]
-        match2 = [idx2[i] for i in match_matrix.nonzero()[1]]
+        g1idx_to_gvalue = np.zeros(len(idx1))
+        for i, v in enumerate(idx1):
+            g1idx_to_gvalue[v] = i
+
+        g2idx_to_gvalue = np.zeros(len(idx2))
+        for i, v in enumerate(idx2):
+            g2idx_to_gvalue[v] = i
+
+        # match1 = [g1idx_to_gvalue[i] for i in match_matrix.nonzero()[0]]
+        # match2 = [g2idx_to_gvalue[i] for i in match_matrix.nonzero()[1]]
+        match1 = [i for i in match_matrix.nonzero()[0]]
+        match2 = [i for i in match_matrix.nonzero()[1]]
+
         score = 0
         for i in range(len(match1)):
-            if match1[i] == match2[i]:
+            if g1idx_to_gvalue[match1[i]] == g2idx_to_gvalue[match2[i]]:
                 score += 1
-        return score / len(match1)
+        return score / len(match1), match1, match2
