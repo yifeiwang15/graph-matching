@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
 
 
-# try different parameter combinations of size, connected_rate and noise_rate.
+# try different parameter combinations of size, connected_rate and noise_rate.3
 # Further add the stochastic property.
 # (But I am not sure its intuition, should further discussion!)
 

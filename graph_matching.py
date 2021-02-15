@@ -6,21 +6,31 @@ from twin_graphs_generator import generate_twin_graphs
 from ARG import ARG
 
 
+
 class GraphMatching(object):
 
     def __init__(self, size, weight_range, connected_rate, noise_rate,
-                 beta_0=0.1, beta_f=20, beta_r=1.05, I_0=20, I_1=200, e_B=0.1, e_C=0.01):
+                 beta_0=0.1, beta_f=20, beta_r=1.05, I_0=20, I_1=200, e_B=0.1, e_C=0.01,
+                 ARG1=None, ARG2=None, idx1=None, idx2=None):
 
-        M1, M2, V1, V2, idx1, idx2 = generate_twin_graphs(size=size,
+        if (ARG1 is None) ^ (ARG2 is None):
+            raise Exception('both ARG needed to be passed in as parameters')
+        if ARG1 is None:
+            M1, M2, V1, V2, idx1, idx2 = generate_twin_graphs(size=size,
                                                           weight_range=weight_range,
                                                           connected_rate=connected_rate,
                                                           noise_rate=noise_rate)
-        print(M1.keys(), M2.keys(), V1, V2, idx1, idx2)
+            print('Randomly generated ARG1, ARG2')
+            print(M1.keys(), M2.keys(), V1, V2, idx1, idx2)
 
-        self.ARG1 = ARG()
-        self.ARG1.from_matrix(M=M1, V=V1)
-        self.ARG2 = ARG()
-        self.ARG2.from_matrix(M=M2, V=V2)
+            self.ARG1 = ARG()
+            self.ARG1.from_matrix(M=M1, V=V1)
+            self.ARG2 = ARG()
+            self.ARG2.from_matrix(M=M2, V=V2)
+        else:
+            print('Passed in ARG1, ARG2')
+            self.ARG1 = ARG1
+            self.ARG2 = ARG2
 
         C_n, C_e = self.pre_compute_compatibility(alpha=1, stochastic=0)
         self.C_n = C_n

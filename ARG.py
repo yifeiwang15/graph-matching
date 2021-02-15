@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+import random
 #test
 # There is some problem with class node and class edge.
 # (The attribute has error)
@@ -8,11 +9,8 @@ import networkx as nx
 
 class ARG(nx.Graph):
 
-    def __init__(self, nx_graph):
-        self.update(nx_graph)
-
     def __init__(self, incoming_graph_data=None, **attr):
-        super().__init__(incoming_graph_data=None, **attr)
+        super().__init__(incoming_graph_data, **attr)
 
     '''
         Attributed Relational Graphs represents a graph data structure with a list of node.
@@ -32,18 +30,22 @@ class ARG(nx.Graph):
         for id in range(len(V)):
             self.add_node(id, nattr=V[id])
 
-        # (TODO) check the dimension and the usage of trainnable paramter( especially loss)
-        # stand for node weight
-        # self.nw =
-        # stand for edge weigth
-        # self.ew =
+        # (TODO) check the dimension and the usage of trainable parameter( especially loss)
+
 
     def nodes_vectors(self):
         num_nodes = self.number_of_nodes()
-        v = np.zeros(num_nodes)
+        attribute_name = random.sample(self.nodes[0].keys(), 1)[0]
+        attribute_dim = self.nodes[0][attribute_name].shape[0]
+        v = np.zeros(shape=(num_nodes, attribute_dim))
         for i in range(num_nodes):
-            v[i] = self.nodes[i]['nattr']
+            v[i] = self.nodes[i][attribute_name]
         return v.reshape([num_nodes,-1])
 
 if __name__ == '__main__':
     g = ARG(M={2:3},V={1})
+    ng = nx.Graph()
+    ng.add_node(1)
+    ng.add_edge(1,3)
+    g1 = ARG(ng)
+    print(g1.nodes)
