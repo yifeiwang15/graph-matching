@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import networkx as nx
 import random
 from ARG import ARG
+import math
 from graph_matching import GraphMatching
 
 
@@ -17,8 +18,11 @@ def generate_random_3Dgraph(n_nodes, radius, rotvect, noise, p, seed=None):
     # Generate a dict of positions
     pos1 = {i: np.random.rand(3) for i in range(n_nodes)}
     G1 = nx.random_geometric_graph(n_nodes, radius, pos=pos1, p=p, seed=seed)
-    for u, v in G1.edges:
-        G1.edges[u, v]['eattr'] = 1
+    for u in range(n_nodes):
+        for v in range(n_nodes):
+            if u != v:
+                d1, d2, d3 = G1.nodes[u]['pos'] - G1.nodes[v]['pos']
+                G1.add_edge(u, v, eattr=math.sqrt(pow(d1, 2) + pow(d2, 2) + pow(d3, 2)))
 
     G2 = nx.Graph()
     n_nodes_r = (1 + noise) * n_nodes
@@ -29,20 +33,18 @@ def generate_random_3Dgraph(n_nodes, radius, rotvect, noise, p, seed=None):
     for i in range(n_nodes):
         G2.add_node(idx2[i], pos=G1.nodes[i]['pos'])
         for j in range(n_nodes):
-            if i is not j and (i, j) in G1.edges:
-                G2.add_edge(idx2[i], idx2[j], eattr=1)
-                G2.add_edge(idx2[i], idx2[j], eattr=1)
+            if i != j and (i, j) in G1.edges:
+                G2.add_edge(idx2[i], idx2[j], eattr=G1.edges[i, j]['eattr'])
 
 
-
-    for i in range(n_nodes_r):
-        if i > n_nodes:
-            G2.add_node(i, pos=np.random.rand(3))
-        else:
-            G2.nodes[i]['pos'] = np.matmul(r.as_matrix(), G2.nodes[i]['pos'])
+    # for i in range(n_nodes_r):
+    #     if i > n_nodes:
+    #         G2.add_node(i, pos=np.random.rand(3))
+    #     else:
+    #         G2.nodes[i]['pos'] = np.matmul(r.as_matrix(), G2.nodes[i]['pos'])
     return G1, G2, idx1, idx2
 
-def network_plot_3D(fig, subplot, G, idx, angle, save_folder=None):
+def network_plot_3D(fig, subplot, G, angle, save_folder=None):
     # set up the axes for the plot
     ax = fig.add_subplot(subplot, projection='3d')
     colors = [plt.cm.hsv(i / G.number_of_nodes()) for i in range(G.number_of_nodes())]
@@ -81,24 +83,15 @@ def network_plot_3D(fig, subplot, G, idx, angle, save_folder=None):
     ax.view_init(30, angle)
     # ax.set_axis_off()
 
+    def update_motif(G, extra_nodes, ):
+        return
 
 if __name__ == '__main__':
+    np.set_printoptions(precision=3)
+    np.set_printoptions(suppress=True)
 
-    # r = R.from_rotvec([0, 0, np.pi / 2])
-    # np.matmul(r.as_matrix(), np.array([1, 1, 1]))
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # x = np.array([0, 1, 0])
-    # y = np.array([0, 1, 1])
-    # z = np.array([0, 1, 0])
-    # ax.plot(x, y, z)
-    # ax.set_xlabel('X axis')
-    # ax.set_ylabel('Y axis')
-    # ax.set_zlabel('Z axis')
-    # plt.show()
-
-    G1, G2, idx1, idx2 = generate_random_3Dgraph(n_nodes=10, radius=0.25, rotvect=np.array([0,0,np.pi/4]),
-                                                 noise=0, p=20, seed=1)
+    G1, G2, idx1, idx2 = generate_random_3Dgraph(n_nodes=8, radius=0.4, rotvect=np.array([0,0,np.pi/4]),
+                                                 noise=0, p=10, seed=1)
     G1 = ARG(incoming_graph_data=G1)
     G2 = ARG(incoming_graph_data=G2)
     algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
@@ -110,6 +103,6 @@ if __name__ == '__main__':
     print('match1, match2', '\n', np.array(match1), '\n', np.array(match2))
     print(final_score)
     fig = plt.figure(figsize=plt.figaspect(0.5))
-    network_plot_3D(fig, 121, G1, algorithm.idx1, angle=10, save_folder=None)
-    network_plot_3D(fig, 122, G2, algorithm.idx2, angle=10, save_folder=None)
+    network_plot_3D(fig, 121, G1, angle=10, save_folder=None)
+    network_plot_3D(fig, 122, G2, angle=10, save_folder=None)
     plt.show()

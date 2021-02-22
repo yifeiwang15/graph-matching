@@ -10,7 +10,7 @@ from ARG import ARG
 class GraphMatching(object):
 
     def __init__(self, size, weight_range, connected_rate, noise_rate,
-                 beta_0=0.1, beta_f=20, beta_r=1.05, I_0=20, I_1=200, e_B=0.1, e_C=0.01,
+                 beta_0=0.1, beta_f=20, beta_r=1.05, I_0=20, I_1=200, e_B=0.5, e_C=0.05,
                  ARG1=None, ARG2=None, idx1=None, idx2=None):
 
         if (ARG1 is None) ^ (ARG2 is None):
@@ -99,9 +99,9 @@ class GraphMatching(object):
                     C_e[(key_a, key_b, key_i, key_j)] = GraphMatching.similarity(self.ARG1.edges[key_a, key_b]['eattr'],
                                                                                  self.ARG2.edges[key_i, key_j]['eattr'])
         # TODO set to 0.1 or INF? by original code, there can be some changes
-        for i in range(A + 1):
-            C_e[i, A] = threshold
-            C_e[A, i] = threshold
+        # for i in range(A + 1):
+        #     C_e[i, A] = threshold
+        #     C_e[A, i] = threshold
 
         return C_n, C_e
 
@@ -110,7 +110,8 @@ class GraphMatching(object):
         # set up the soft assignment matrix
         A = self.C_n.shape[0] - 1
         I = self.C_n.shape[1] - 1
-        m_Head = np.random.rand(A + 1, I + 1)  # Not an assignment matrix. (Normalized??)
+        # m_Head = np.random.rand(A + 1, I + 1)  # Not an assignment matrix. (Normalized??)
+        m_Head = np.ones(shape=(A + 1, I + 1))
         m_Head[-1, -1] = 0
 
         # Initialization for parameters
@@ -146,20 +147,26 @@ class GraphMatching(object):
                 Q = np.zeros([A + 1, I + 1])
 
                 # Edge attribute
+                # Notice in networkx implementation key_a will be always less than Key_b
+                # so we need to permute key_a and key_b in the loop (same for key_i, key_j)
                 for (key_a, key_b) in list(self.ARG1.edges):
                     for (key_i, key_j) in list(self.ARG2.edges):
                         Q[key_a, key_i] += self.C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_b, key_j]
+                        Q[key_b, key_i] += self.C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_a, key_j]
+
+                        Q[key_a, key_j] += self.C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_b, key_i]
+                        Q[key_b, key_j] += self.C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_a, key_i]
+
                         # print(C_e[(key_a, key_b, key_i, key_j)] , m_Head[key_a, key_i])
                 # Node attribute
-                Q = Q + self.C_n
+                Q = Q# + self.C_n
                 # Update m_Head
                 m_Head = np.exp(beta * Q)
                 m_Head[-1, -1] = 0
 
                 converge_C = False
                 I_C = 0
-                m_Head = normalize(m_Head, norm='l2', axis=0) * normalize(m_Head, norm='l2', axis=0)  # By row
-                m_Head = normalize(m_Head, norm='l2', axis=1) * normalize(m_Head, norm='l2', axis=1)
+
                 while (not converge_C) and I_C <= self.I_1:  # Do C until C is converge or iteration exceeds
                     I_C += 1
                     old_C = m_Head
@@ -167,13 +174,13 @@ class GraphMatching(object):
                     # Begin alternative normalization.
                     # Do not consider the row or column of slacks
                     # by column
-                    m_Head = normalize(m_Head, norm='l2', axis=0) * normalize(m_Head, norm='l2', axis=0)
+                    m_Head = normalize(m_Head, norm='l1', axis=0)
                     # By row
-                    m_Head = normalize(m_Head, norm='l2', axis=1) * normalize(m_Head, norm='l2', axis=1)
+                    m_Head = normalize(m_Head, norm='l1', axis=1)
 
                     # print(sum(m_Head))
                     # update converge_C
-                    converge_C = abs(sum(sum(m_Head - old_C))) < self.e_C
+                    converge_C = sum(sum(abs(m_Head - old_C))) < self.e_C
 
                 # update converge_B
                 converge_B = abs(sum(sum(m_Head[:A, :I] - old_B[:A, :I]))) < self.e_B
@@ -182,6 +189,8 @@ class GraphMatching(object):
             beta *= self.beta_r
             # print(beta, beta_f, beta_r)
         match_matrix = GraphMatching.heuristic(m_Head, A, I)
+
+        print(m_Head)
         # match_matrix = m_Head
         return match_matrix
 
@@ -196,10 +205,10 @@ class GraphMatching(object):
         from a row dominant doubly stochastic matrix.
         '''
         M = normalize(M, norm='l2', axis=1) * normalize(M, norm='l2', axis=1)
-        for i in range(A + 1):
+        for i in range(A): # skip slack row
             index = np.argmax(M[i, :])  # Get the maximum index of each row
             M[i, :] = 0
-            if index != I - 1:
+            if index != I: # skip slack column
                 M[:, index] = 0
             M[i, index] = 1
         M = M[:A, :I]
@@ -267,4 +276,4 @@ class GraphMatching(object):
         for i in range(len(match1)):
             if g1idx_to_gvalue[match1[i]] == g2idx_to_gvalue[match2[i]]:
                 score += 1
-        return score / len(match1), match1, match2
+        return score / len(idx1), match1, match2
