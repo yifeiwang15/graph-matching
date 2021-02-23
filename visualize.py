@@ -9,20 +9,22 @@ import math
 from graph_matching import GraphMatching
 
 
-def generate_random_3Dgraph(n_nodes, radius, rotvect, noise, p, seed=None):
+def generate_random_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=None):
     if seed is not None:
         random.seed(seed)
 
     r = R.from_rotvec(rotvect)#[0, 0, np.pi / 2])
     # np.matmul(r.as_matrix(), np.array([1, 1, 1]))
     # Generate a dict of positions
+    G1 = nx.Graph()
     pos1 = {i: np.random.rand(3) for i in range(n_nodes)}
-    G1 = nx.random_geometric_graph(n_nodes, radius, pos=pos1, p=p, seed=seed)
+    for i in range(n_nodes):
+        G1.add_node(i, pos=pos1[i])
     for u in range(n_nodes):
         for v in range(n_nodes):
-            if u != v:
-                d1, d2, d3 = G1.nodes[u]['pos'] - G1.nodes[v]['pos']
-                G1.add_edge(u, v, eattr=math.sqrt(pow(d1, 2) + pow(d2, 2) + pow(d3, 2)))
+            if u != v and random.random() <= connection_rate:
+                dist= G1.nodes[u]['pos'] - G1.nodes[v]['pos']
+                G1.add_edge(u, v, eattr=np.linalg.norm(np.array(dist)))
 
     G2 = nx.Graph()
     n_nodes_r = (1 + noise) * n_nodes
@@ -90,8 +92,8 @@ if __name__ == '__main__':
     np.set_printoptions(precision=3)
     np.set_printoptions(suppress=True)
 
-    G1, G2, idx1, idx2 = generate_random_3Dgraph(n_nodes=8, radius=0.4, rotvect=np.array([0,0,np.pi/4]),
-                                                 noise=0, p=10, seed=1)
+    G1, G2, idx1, idx2 = generate_random_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]),
+                                                 noise=0, connection_rate=0, seed=1)
     G1 = ARG(incoming_graph_data=G1)
     G2 = ARG(incoming_graph_data=G2)
     algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
@@ -106,3 +108,4 @@ if __name__ == '__main__':
     network_plot_3D(fig, 121, G1, angle=10, save_folder=None)
     network_plot_3D(fig, 122, G2, angle=10, save_folder=None)
     plt.show()
+    print(1)

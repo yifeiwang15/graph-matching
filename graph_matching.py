@@ -32,7 +32,7 @@ class GraphMatching(object):
             self.ARG1 = ARG1
             self.ARG2 = ARG2
 
-        C_n, C_e = self.pre_compute_compatibility(alpha=1, stochastic=0)
+        C_n, C_e = self.pre_compute_compatibility(alpha=1, stochastic=0, node_binary=False)
         self.C_n = C_n
         self.C_e = C_e
 
@@ -159,7 +159,7 @@ class GraphMatching(object):
 
                         # print(C_e[(key_a, key_b, key_i, key_j)] , m_Head[key_a, key_i])
                 # Node attribute
-                Q = Q# + self.C_n
+                Q = Q + self.C_n
                 # Update m_Head
                 m_Head = np.exp(beta * Q)
                 m_Head[-1, -1] = 0
@@ -173,17 +173,20 @@ class GraphMatching(object):
 
                     # Begin alternative normalization.
                     # Do not consider the row or column of slacks
-                    # by column
-                    m_Head = normalize(m_Head, norm='l1', axis=0)
-                    # By row
-                    m_Head = normalize(m_Head, norm='l1', axis=1)
+                    # by row, avoid normalize with m_Head[-1, -1]
+                    m_Head_tmp = np.zeros(shape=m_Head.shape)
+                    m_Head_tmp[:-1] += normalize(m_Head[:-1], norm='l1', axis=1)
+                    # By column
+                    m_Head_tmp[:, :-1] += normalize(m_Head[:, :-1], norm='l1', axis=0)
 
+                    m_Head_tmp[:-1, :-1] /= 2
+                    m_Head = m_Head_tmp
                     # print(sum(m_Head))
                     # update converge_C
                     converge_C = sum(sum(abs(m_Head - old_C))) < self.e_C
 
                 # update converge_B
-                converge_B = abs(sum(sum(m_Head[:A, :I] - old_B[:A, :I]))) < self.e_B
+                converge_B = sum(sum(abs(m_Head[:A, :I] - old_B[:A, :I]))) < self.e_B
                 # print(converge_B, abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))))
             # update beta
             beta *= self.beta_r
@@ -229,6 +232,7 @@ class GraphMatching(object):
 
         dim = len(atr1)
         score = np.exp(-((atr1 - atr2) ** 2).sum() / 2) / (np.sqrt(2 * np.pi) ** dim)
+        #e^((sum((a-b)^2) / 2) / sqrt(2*pi)^dim)
         # score = atr1 * atr2
         return score
 

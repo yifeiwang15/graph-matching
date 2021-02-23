@@ -40,7 +40,7 @@ class ARG(nx.Graph):
         v = np.zeros(shape=(num_nodes, attribute_dim))
         for i in range(num_nodes):
             v[i] = self.nodes[i][attribute_name]
-        return v.reshape([num_nodes,-1])
+        return v
 
 if __name__ == '__main__':
     g = ARG(M={2:3},V={1})
