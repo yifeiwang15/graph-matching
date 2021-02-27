@@ -18,9 +18,9 @@ class ARG(nx.Graph):
     '''
     def from_matrix(self, M, V):
         # Check if M is square
-        # assert (M.shape == M.transpose().shape), "Input edge weight matrix is not square."
+        assert (M.shape == M.transpose().shape), "Input edge weight matrix is not square."
         # Check if numbers of nodes from M and from V is matched.
-        # assert (len(M) == len(V)), "Input sizes of edge weight matrix and of nodes attributes do not match."
+        assert (len(M) == len(V)), "Input sizes of edge weight matrix and of nodes attributes do not match."
 
         # Use dictionary structure to store nodes and edges.
         super(ARG, self).__init__()

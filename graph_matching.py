@@ -8,9 +8,18 @@ from ARG import ARG
 
 
 class GraphMatching(object):
+    '''
+    The implementation of a graduate assignment graph matching algorithm integrated with
+    networkx.
+    To use:
+        >>> algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
+                                      ARG1=G1, ARG2=G2, idx1=idx1, idx2=idx2)
+        >>> match_matrix = algorithm.graph_matching()
+        >>> final_score, match1, match2 = GraphMatching.match_score(match_matrix, algorithm.idx1, algorithm.idx2)
+    '''
 
     def __init__(self, size, weight_range, connected_rate, noise_rate,
-                 beta_0=0.1, beta_f=20, beta_r=1.05, I_0=20, I_1=200, e_B=0.5, e_C=0.05,
+                 beta_0=20, beta_f=201, beta_r=1.25, I_0=20, I_1=200, e_B=0.1, e_C=0.01,
                  ARG1=None, ARG2=None, idx1=None, idx2=None):
 
         if (ARG1 is None) ^ (ARG2 is None):
@@ -32,13 +41,14 @@ class GraphMatching(object):
             self.ARG1 = ARG1
             self.ARG2 = ARG2
 
-        C_n, C_e = self.pre_compute_compatibility(alpha=1, stochastic=0, node_binary=False)
+        C_n, C_e = self.pre_compute_compatibility(alpha=1, node_binary=False)
         self.C_n = C_n
         self.C_e = C_e
 
         self.idx1 = idx1
         self.idx2 = idx2
 
+        # set up the algorithm parameters
         self.beta_0 = beta_0
         self.beta_f = beta_f
         self.beta_r = beta_r
@@ -49,29 +59,23 @@ class GraphMatching(object):
 
 
 
-    def pre_compute_compatibility(self, alpha=1, stochastic=0, node_binary=True, edge_binary=True):
+    def pre_compute_compatibility(self, alpha=1, node_binary=True):
         '''
         Compute the best matching with two ARGs.
-
+        ARGS:
+            alpha: weight of node attributes
+            node_binary: True if the node attribute is binary
         '''
-
-        beta_0 = 0.1
-        threshold = 0.1
 
         # Size of the real match-in matrix
         A = self.ARG1.number_of_nodes()
         I = self.ARG2.number_of_nodes()
-        real_size = [A, I]  # ???
         augment_size = [A + 1, I + 1]  # size of the matrix with slacks
 
-        # initialize beta to beta_0
-        beta = beta_0
-
-        #### compute c_aibj ####
         # nil node compatibility percentage
         prct = 10
 
-        ## pre-calculate the node compatibility
+        # pre-calculate the node compatibility
         C_n = np.zeros(augment_size)
 
         if node_binary:
@@ -80,10 +84,11 @@ class GraphMatching(object):
         else:
             C_n[:A, :I] = cdist(self.ARG1.nodes_vectors(), self.ARG2.nodes_vectors(), GraphMatching.compatibility)
 
+
         # Add score to slacks
         C_n[A, :-1] = np.percentile(C_n[:A, :I], prct, 0)
         C_n[:-1, I] = np.percentile(C_n[:A, :I], prct, 1)
-        C_n[A, I] = 0
+        C_n[A, I] = np.mean(np.sum(C_n[A, :-1]) + np.mean(C_n[:-1, I]))
 
         # times the alpha weight
         C_n = alpha * C_n
@@ -92,43 +97,19 @@ class GraphMatching(object):
         C_e = dict()
         for (key_a, key_b) in list(self.ARG1.edges):
             for (key_i, key_j) in list(self.ARG2.edges):
-                if edge_binary:
-                    C_e[(key_a, key_b, key_i, key_j)] = GraphMatching.similarity(self.ARG1.edges[key_a, key_b]['eattr'],
-                                                                                 self.ARG2.edges[key_i, key_j]['eattr'])
-                else:
-                    C_e[(key_a, key_b, key_i, key_j)] = GraphMatching.similarity(self.ARG1.edges[key_a, key_b]['eattr'],
-                                                                                 self.ARG2.edges[key_i, key_j]['eattr'])
-        # TODO set to 0.1 or INF? by original code, there can be some changes
-        # for i in range(A + 1):
-        #     C_e[i, A] = threshold
-        #     C_e[A, i] = threshold
-
+                C_e[(key_a, key_b, key_i, key_j)] = GraphMatching.similarity(self.ARG1.edges[key_a, key_b]['eattr'],
+                                                                             self.ARG2.edges[key_i, key_j]['eattr'])
         return C_n, C_e
 
     def graph_matching(self):
-        ##  We first do not consider the stochastic.
         # set up the soft assignment matrix
         A = self.C_n.shape[0] - 1
         I = self.C_n.shape[1] - 1
-        # m_Head = np.random.rand(A + 1, I + 1)  # Not an assignment matrix. (Normalized??)
         m_Head = np.ones(shape=(A + 1, I + 1))
         m_Head[-1, -1] = 0
 
-        # Initialization for parameters
-
-        ## beta is the penalty parameters
-        # includes beta_0, beta_f, beta_r
-
-        ## I controls the maximum iteration for each round
-        # includes I_0 and I_1
-
-        ## e controls the range
-        # includes e_B and e_C
-
         # begin matching
         beta = self.beta_0
-
-        stochastic = False  ### we first do not consider this case
 
         while beta < self.beta_f:
 
@@ -137,10 +118,8 @@ class GraphMatching(object):
             converge_B = False
             I_B = 0
             while (not converge_B) and I_B <= self.I_0:  # Do B until B is converge or iteration exceeds
-                if stochastic:
-                    m_Head = m_Head  ### + ???
 
-                old_B = m_Head  # the old matrix
+                old_B = m_Head # the old matrix
                 I_B += 1
 
                 # Build the partial derivative matrix Q
@@ -157,12 +136,11 @@ class GraphMatching(object):
                         Q[key_a, key_j] += self.C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_b, key_i]
                         Q[key_b, key_j] += self.C_e[(key_a, key_b, key_i, key_j)] * m_Head[key_a, key_i]
 
-                        # print(C_e[(key_a, key_b, key_i, key_j)] , m_Head[key_a, key_i])
                 # Node attribute
                 Q = Q + self.C_n
                 # Update m_Head
                 m_Head = np.exp(beta * Q)
-                m_Head[-1, -1] = 0
+                # m_Head[-1, -1] = 0
 
                 converge_C = False
                 I_C = 0
@@ -174,26 +152,21 @@ class GraphMatching(object):
                     # Begin alternative normalization.
                     # Do not consider the row or column of slacks
                     # by row, avoid normalize with m_Head[-1, -1]
-                    m_Head_tmp = np.zeros(shape=m_Head.shape)
-                    m_Head_tmp[:-1] += normalize(m_Head[:-1], norm='l1', axis=1)
-                    # By column
-                    m_Head_tmp[:, :-1] += normalize(m_Head[:, :-1], norm='l1', axis=0)
+                    m_Head = normalize(m_Head, norm='l1', axis=0)
+                    # By row
+                    m_Head = normalize(m_Head, norm='l1', axis=1)
 
-                    m_Head_tmp[:-1, :-1] /= 2
-                    m_Head = m_Head_tmp
-                    # print(sum(m_Head))
                     # update converge_C
-                    converge_C = sum(sum(abs(m_Head - old_C))) < self.e_C
+                    converge_C = np.sum(abs(m_Head - old_C)) < self.e_C
 
                 # update converge_B
-                converge_B = sum(sum(abs(m_Head[:A, :I] - old_B[:A, :I]))) < self.e_B
-                # print(converge_B, abs(sum(sum(m_Head[:A,:I]-old_B[:A,:I]))))
+                converge_B = np.sum(abs(m_Head[:A, :I] - old_B[:A, :I])) < self.e_B
+                # print('converge_B', np.sum(abs(m_Head[:A, :I] - old_B[:A, :I])) )
             # update beta
             beta *= self.beta_r
             # print(beta, beta_f, beta_r)
-        match_matrix = GraphMatching.heuristic(m_Head, A, I)
-
         print(m_Head)
+        match_matrix = GraphMatching.heuristic(m_Head, A, I)
         # match_matrix = m_Head
         return match_matrix
 
@@ -207,7 +180,7 @@ class GraphMatching(object):
         This heuristic will always return a permutation matrix
         from a row dominant doubly stochastic matrix.
         '''
-        M = normalize(M, norm='l2', axis=1) * normalize(M, norm='l2', axis=1)
+        # M = normalize(M, norm='l2', axis=1) * normalize(M, norm='l2', axis=1)
         for i in range(A): # skip slack row
             index = np.argmax(M[i, :])  # Get the maximum index of each row
             M[i, :] = 0
@@ -233,7 +206,6 @@ class GraphMatching(object):
         dim = len(atr1)
         score = np.exp(-((atr1 - atr2) ** 2).sum() / 2) / (np.sqrt(2 * np.pi) ** dim)
         #e^((sum((a-b)^2) / 2) / sqrt(2*pi)^dim)
-        # score = atr1 * atr2
         return score
 
     @staticmethod
@@ -263,6 +235,15 @@ class GraphMatching(object):
     # graph matching algorithm!
     @staticmethod
     def match_score(match_matrix, idx1, idx2):
+        '''
+        calculate the percentage of correctly matched nodes
+        :param match_matrix: matching result with slack variables
+        :param idx1: permutation of nodes from original graph to graph1
+        :param idx2: permutation of nodes from original graph to graph2
+        :return: the percentage,
+                 matching array of nodes from graph1 to original graph
+                 matching array of nodes from graph2 to original graph
+        '''
         g1idx_to_gvalue = np.zeros(len(idx1))
         for i, v in enumerate(idx1):
             g1idx_to_gvalue[v] = i
@@ -271,8 +252,6 @@ class GraphMatching(object):
         for i, v in enumerate(idx2):
             g2idx_to_gvalue[v] = i
 
-        # match1 = [g1idx_to_gvalue[i] for i in match_matrix.nonzero()[0]]
-        # match2 = [g2idx_to_gvalue[i] for i in match_matrix.nonzero()[1]]
         match1 = [i for i in match_matrix.nonzero()[0]]
         match2 = [i for i in match_matrix.nonzero()[1]]
 

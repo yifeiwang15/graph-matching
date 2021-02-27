@@ -9,7 +9,16 @@ import math
 from graph_matching import GraphMatching
 
 
-def generate_random_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=None):
+def generate_rotation_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=None):
+    '''
+    generate a graph with nodes in 3d coordinates and a graph rotate from it
+    :param n_nodes: number of nodes
+    :param rotvect: rotation vector axis:[x, y, z]
+    :param noise: noise to nodes value
+    :param connection_rate: possibility of having a edge between two nodes
+    :param seed: random seed
+    :return: graph1, rotation of graph1, permutation of graph1, permutation of rotated graph1
+    '''
     if seed is not None:
         random.seed(seed)
 
@@ -37,7 +46,6 @@ def generate_random_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=None)
         for j in range(n_nodes):
             if i != j and (i, j) in G1.edges:
                 G2.add_edge(idx2[i], idx2[j], eattr=G1.edges[i, j]['eattr'])
-
 
     # for i in range(n_nodes_r):
     #     if i > n_nodes:
@@ -85,27 +93,32 @@ def network_plot_3D(fig, subplot, G, angle, save_folder=None):
     ax.view_init(30, angle)
     # ax.set_axis_off()
 
-    def update_motif(G, extra_nodes, ):
-        return
 
 if __name__ == '__main__':
-    np.set_printoptions(precision=3)
-    np.set_printoptions(suppress=True)
+    sum_accuracy = 0
+    loops = 100
+    plot = False
+    for i in range(loops):
+        np.set_printoptions(precision=3)
+        np.set_printoptions(suppress=True)
 
-    G1, G2, idx1, idx2 = generate_random_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]),
-                                                 noise=0, connection_rate=0, seed=1)
-    G1 = ARG(incoming_graph_data=G1)
-    G2 = ARG(incoming_graph_data=G2)
-    algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
-                              ARG1=G1, ARG2=G2, idx1=idx1, idx2=idx2)
-    match_matrix = algorithm.graph_matching()
-    final_score, match1, match2 = GraphMatching.match_score(match_matrix, algorithm.idx1, algorithm.idx2)
-    print(match_matrix)
-    print('idx1, idx2', algorithm.idx1, algorithm.idx2)
-    print('match1, match2', '\n', np.array(match1), '\n', np.array(match2))
-    print(final_score)
-    fig = plt.figure(figsize=plt.figaspect(0.5))
-    network_plot_3D(fig, 121, G1, angle=10, save_folder=None)
-    network_plot_3D(fig, 122, G2, angle=10, save_folder=None)
-    plt.show()
-    print(1)
+        G1, G2, idx1, idx2 = generate_rotation_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]),
+                                                       noise=0, connection_rate=0.1, seed=1)
+        G1 = ARG(incoming_graph_data=G1)
+        G2 = ARG(incoming_graph_data=G2)
+        algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
+                                  ARG1=G1, ARG2=G2, idx1=idx1, idx2=idx2)
+        match_matrix = algorithm.graph_matching()
+        final_score, match1, match2 = GraphMatching.match_score(match_matrix, algorithm.idx1, algorithm.idx2)
+        print(match_matrix)
+        print('idx1, idx2', algorithm.idx1, algorithm.idx2)
+        print('match1, match2', '\n', np.array(match1), '\n', np.array(match2))
+        print(final_score)
+        if plot:
+            fig = plt.figure(figsize=plt.figaspect(0.5))
+            network_plot_3D(fig, 121, G1, angle=10, save_folder=None)
+            network_plot_3D(fig, 122, G2, angle=10, save_folder=None)
+            plt.show()
+        print('----------')
+        sum_accuracy += final_score
+    print('accuracy = ', sum_accuracy / loops)
