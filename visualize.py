@@ -9,7 +9,7 @@ import math
 from graph_matching import GraphMatching
 
 
-def generate_rotation_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=None):
+def generate_rotation_3Dgraph(n_nodes, rotvect, noise, connection_rate, nattr_dim, seed=None):
     '''
     generate a graph with nodes in 3d coordinates and a graph rotate from it
     :param n_nodes: number of nodes
@@ -29,6 +29,7 @@ def generate_rotation_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=Non
     pos1 = {i: np.random.rand(3) for i in range(n_nodes)}
     for i in range(n_nodes):
         G1.add_node(i, pos=pos1[i])
+        G1.nodes[i]['nattr'] = np.random.rand(nattr_dim)
     for u in range(n_nodes):
         for v in range(n_nodes):
             if u != v and random.random() <= connection_rate:
@@ -43,6 +44,7 @@ def generate_rotation_3Dgraph(n_nodes, rotvect, noise, connection_rate, seed=Non
 
     for i in range(n_nodes):
         G2.add_node(idx2[i], pos=G1.nodes[i]['pos'])
+        G2.nodes[idx2[i]]['nattr'] = G1.nodes[i]['nattr']
         for j in range(n_nodes):
             if i != j and (i, j) in G1.edges:
                 G2.add_edge(idx2[i], idx2[j], eattr=G1.edges[i, j]['eattr'])
@@ -102,8 +104,9 @@ if __name__ == '__main__':
         np.set_printoptions(precision=3)
         np.set_printoptions(suppress=True)
 
-        G1, G2, idx1, idx2 = generate_rotation_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]),
-                                                       noise=0, connection_rate=0.1, seed=1)
+        G1, G2, idx1, idx2 = \
+            generate_rotation_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]), noise=0,
+                                      connection_rate=0.1, nattr_dim=3, seed=1)
         G1 = ARG(incoming_graph_data=G1)
         G2 = ARG(incoming_graph_data=G2)
         algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
