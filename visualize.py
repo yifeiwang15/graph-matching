@@ -96,8 +96,8 @@ def network_plot_3D(fig, subplot, G, angle, save_folder=None):
 
 if __name__ == '__main__':
     sum_accuracy = 0
-    loops = 100
-    plot = False
+    loops = 1
+    plot = True
     for i in range(loops):
         np.set_printoptions(precision=3)
         np.set_printoptions(suppress=True)

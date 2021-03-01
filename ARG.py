@@ -35,17 +35,43 @@ class ARG(nx.Graph):
 
     def nodes_vectors(self):
         num_nodes = self.number_of_nodes()
-        attribute_name = random.sample(self.nodes[0].keys(), 1)[0]
+        attribute_name = 'nattr'
         attribute_dim = self.nodes[0][attribute_name].shape[0]
         v = np.zeros(shape=(num_nodes, attribute_dim))
         for i in range(num_nodes):
             v[i] = self.nodes[i][attribute_name]
         return v
 
+    def save(self, edge_path, node_path):
+        """
+        save edges and nodes as npy format
+        """
+        np.save(edge_path, list(self.edges.data()))
+        np.save(node_path, list(self.nodes.data()))
+
+    def load(self, edge_path, node_path):
+        """
+        load edges and nodes as npy format
+        """
+        edges_map = np.load(edge_path)
+        nodes_map = np.load(node_path)
+        self.add_edges_from(edges_map)
+        self.add_nodes_from(nodes_map)
+
 if __name__ == '__main__':
-    g = ARG(M={2:3},V={1})
+    g = ARG(M={2: 3}, V={1})
+
     ng = nx.Graph()
-    ng.add_node(1)
-    ng.add_edge(1,3)
+    ng.add_node(1, nattr=[1,2,3])
+    ng.add_node(2, nattr=[4,5,6])
+    ng.add_edge(1, 3, eattr=0.1)
     g1 = ARG(ng)
-    print(g1.nodes)
+
+    print(g1.nodes, g1.nodes.data(), g1.edges.data())
+    g1.save('./e.npy', './n.npy')
+    g2 = ARG()
+    e = np.load('./e.npy')
+    n = np.load('./n.npy')
+    g2.add_edges_from(e)
+    g2.add_nodes_from(n)
+    print(g2.nodes, g2.nodes.data(), g2.edges.data())
