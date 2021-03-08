@@ -88,7 +88,7 @@ class GraphMatching(object):
         # Add score to slacks
         C_n[A, :-1] = np.percentile(C_n[:A, :I], prct, 0)
         C_n[:-1, I] = np.percentile(C_n[:A, :I], prct, 1)
-        C_n[A, I] = np.mean(np.sum(C_n[A, :-1]) + np.mean(C_n[:-1, I]))
+        # C_n[A, I] = np.mean(np.sum(C_n[A, :-1]) + np.mean(C_n[:-1, I]))
 
         # times the alpha weight
         C_n = alpha * C_n

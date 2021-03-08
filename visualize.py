@@ -37,23 +37,23 @@ def generate_rotation_3Dgraph(n_nodes, rotvect, noise, connection_rate, nattr_di
                 G1.add_edge(u, v, eattr=np.linalg.norm(np.array(dist)))
 
     G2 = nx.Graph()
-    n_nodes_r = (1 + noise) * n_nodes
+    # n_nodes_r = (1 + noise) * n_nodes
 
     idx1 = np.arange(n_nodes)
     idx2 = np.random.permutation(n_nodes)
 
     for i in range(n_nodes):
         G2.add_node(idx2[i], pos=G1.nodes[i]['pos'])
-        G2.nodes[idx2[i]]['nattr'] = G1.nodes[i]['nattr']
+        G2.nodes[idx2[i]]['nattr'] = G1.nodes[i]['nattr'] * (1 + noise)
         for j in range(n_nodes):
             if i != j and (i, j) in G1.edges:
                 G2.add_edge(idx2[i], idx2[j], eattr=G1.edges[i, j]['eattr'])
 
-    # for i in range(n_nodes_r):
-    #     if i > n_nodes:
-    #         G2.add_node(i, pos=np.random.rand(3))
-    #     else:
-    #         G2.nodes[i]['pos'] = np.matmul(r.as_matrix(), G2.nodes[i]['pos'])
+    for i in range(n_nodes):
+        if i > n_nodes:
+            G2.add_node(i, pos=np.random.rand(3))
+        else:
+            G2.nodes[i]['pos'] = np.matmul(r.as_matrix(), G2.nodes[i]['pos'])
     return G1, G2, idx1, idx2
 
 def network_plot_3D(fig, subplot, G, angle, save_folder=None):
@@ -105,8 +105,8 @@ if __name__ == '__main__':
         np.set_printoptions(suppress=True)
 
         G1, G2, idx1, idx2 = \
-            generate_rotation_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]), noise=0,
-                                      connection_rate=0.1, nattr_dim=3, seed=1)
+            generate_rotation_3Dgraph(n_nodes=8, rotvect=np.array([0,0,np.pi/4]), noise=0.01,
+                                      connection_rate=0., nattr_dim=3, seed=1)
         G1 = ARG(incoming_graph_data=G1)
         G2 = ARG(incoming_graph_data=G2)
         algorithm = GraphMatching(size=0, weight_range=0, connected_rate=0, noise_rate=0,
